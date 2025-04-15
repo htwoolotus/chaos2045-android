@@ -1,6 +1,8 @@
 package com.example.chaos2045
 
+import android.content.ContentValues
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -80,6 +82,69 @@ class MainActivity : ComponentActivity() {
                     val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
                     if (sharedText != null) {
                         database.insertSharedContent(sharedText, "text")
+                    }
+                }
+                "image/jpeg" -> {
+                    val imageUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                    android.util.Log.d("SharedIntent", "Received image URI: $imageUri")
+                    if (imageUri != null) {
+                        database.insertSharedContent(imageUri.toString(), "image")
+                        // 获取图片内容并保存到相册
+                        try {
+                            val inputStream = contentResolver.openInputStream(imageUri)
+                            if (inputStream != null) {
+                                val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                                inputStream.close()
+                                
+                                // 保存到相册
+                                val filename = "CHAOS2045_${System.currentTimeMillis()}.jpg"
+                                val contentValues = ContentValues().apply {
+                                    put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, filename)
+                                    put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                                    put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Chaos2045")
+                                }
+                                
+                                val uri = contentResolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                                if (uri != null) {
+                                    val outputStream = contentResolver.openOutputStream(uri)
+                                    if (outputStream != null) {
+                                        bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                        outputStream.close()
+                                        android.util.Log.d("SharedIntent", "Image saved to gallery: $uri")
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("SharedIntent", "Error saving image to gallery", e)
+                        }
+                    }
+                }
+                "video/*" -> {
+                    val videoUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                    android.util.Log.d("SharedIntent", "Received video URI: $videoUri")
+                    if (videoUri != null) {
+                        database.insertSharedContent(videoUri.toString(), "video")
+                    }
+                }
+                "audio/*" -> {
+                    val audioUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                    android.util.Log.d("SharedIntent", "Received audio URI: $audioUri")
+                    if (audioUri != null) {
+                        database.insertSharedContent(audioUri.toString(), "audio")
+                    }
+                }
+                "application/*" -> {
+                    val fileUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                    android.util.Log.d("SharedIntent", "Received file URI: $fileUri")
+                    if (fileUri != null) {
+                        database.insertSharedContent(fileUri.toString(), "file")
+                    }
+                }
+                else -> {
+                    val unknownUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                    android.util.Log.d("SharedIntent", "Received unknown type: ${intent.type}, URI: $unknownUri")
+                    if (unknownUri != null) {
+                        database.insertSharedContent(unknownUri.toString(), "unknown")
                     }
                 }
             }
