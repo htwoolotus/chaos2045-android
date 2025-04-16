@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
@@ -129,7 +130,6 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         handleIntent(intent)
     }
-
 
     private fun saveImageToGallery(imageUri: Uri?) {
         // 获取图片内容并保存到相册
