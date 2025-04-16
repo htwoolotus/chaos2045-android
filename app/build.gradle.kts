@@ -54,6 +54,11 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.generativeai)
     implementation(libs.androidx.navigation.compose)
+    
+    // OkHttp dependencies
+    implementation(libs.okhttp)
+    implementation(libs.logging.interceptor)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
