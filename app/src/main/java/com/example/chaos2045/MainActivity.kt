@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.chaos2045.database.SharedContentDatabase
+import com.example.chaos2045.database.SharedContentEntity
 import com.example.chaos2045.ui.BakingScreen
 import com.example.chaos2045.ui.ContentDetailScreen
 import com.example.chaos2045.ui.SetupScreen
@@ -33,6 +35,7 @@ import com.example.chaos2045.ui.theme.Chaos2045Theme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedWriter
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
@@ -54,7 +57,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        database = SharedContentDatabase(this)
+        database = SharedContentDatabase.getDatabase(this)
+        setTitle(R.string.app_name)
 
         setContent {
             Chaos2045Theme {
@@ -104,7 +108,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable(Screen.Setup.route) {
-                                SetupScreen()
+                                SetupScreen(database = database)
                             }
                             composable("content_detail/{contentId}") { backStackEntry ->
                                 val contentId = backStackEntry.arguments?.getString("contentId")?.toLongOrNull()
@@ -134,7 +138,7 @@ class MainActivity : ComponentActivity() {
     private fun saveImageToGallery(imageUri: Uri?) {
         // 获取图片内容并保存到相册
         if (imageUri != null) {
-            database.insertSharedContent(imageUri.toString(), "image")
+            database.sharedContentDao().insertContent(SharedContentEntity(content = imageUri.toString(), type = "image"))
             // 获取图片内容并保存到相册
             try {
                 val inputStream = contentResolver.openInputStream(imageUri)
@@ -246,6 +250,14 @@ class MainActivity : ComponentActivity() {
                 if (response.isSuccessful) {
                     Log.d("SharedIntent", "Text sent to remote API successfully")
                 } else {
+                    // 在主线程中显示Toast提示
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Failed to send text: ${response.code}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                     Log.e("SharedIntent", "Failed to send text to remote API: ${response.code}")
                 }
             } catch (e: Exception) {
@@ -262,9 +274,11 @@ class MainActivity : ComponentActivity() {
                 "text/plain" -> {
                     val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
                     if (sharedText != null) {
-                        database.insertSharedContent(sharedText, "text")
-                        // 将文本内容发送到远程接口
-                        sendTextToRemoteApi(sharedText)
+                        CoroutineScope(Dispatchers.IO).launch {
+                            database.sharedContentDao().insertContent(SharedContentEntity(content = sharedText, type = "text"))
+                            // 将文本内容发送到远程接口
+                            sendTextToRemoteApi(sharedText)
+                        }
                     }
                 }
                 "image/jpeg" -> {
@@ -272,38 +286,48 @@ class MainActivity : ComponentActivity() {
                     Log.d("SharedIntent", "Received image URI: $imageUri")
                     // 获取图片内容并保存到相册
                     if (imageUri != null) {
-                        database.insertSharedContent(imageUri.toString(), "image")
-                        saveImageToGallery(imageUri)
-                        // 将图片内容发送到远程接口
-                        sendImageToRemoteApi(imageUri)
+                        CoroutineScope(Dispatchers.IO).launch {
+                            database.sharedContentDao().insertContent(SharedContentEntity(content = imageUri.toString(), type = "image"))
+                            saveImageToGallery(imageUri)
+                            // 将图片内容发送到远程接口
+                            sendImageToRemoteApi(imageUri)
+                        }
                     }
                 }
                 "video/*" -> {
                     val videoUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
                     Log.d("SharedIntent", "Received video URI: $videoUri")
                     if (videoUri != null) {
-                        database.insertSharedContent(videoUri.toString(), "video")
+                        CoroutineScope(Dispatchers.IO).launch {
+                            database.sharedContentDao().insertContent(SharedContentEntity(content = videoUri.toString(), type = "video"))
+                        }
                     }
                 }
                 "audio/*" -> {
                     val audioUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
                     Log.d("SharedIntent", "Received audio URI: $audioUri")
                     if (audioUri != null) {
-                        database.insertSharedContent(audioUri.toString(), "audio")
+                        CoroutineScope(Dispatchers.IO).launch {
+                            database.sharedContentDao().insertContent(SharedContentEntity(content = audioUri.toString(), type = "audio"))
+                        }
                     }
                 }
                 "application/*" -> {
                     val fileUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
                     Log.d("SharedIntent", "Received file URI: $fileUri")
                     if (fileUri != null) {
-                        database.insertSharedContent(fileUri.toString(), "file")
+                        CoroutineScope(Dispatchers.IO).launch {
+                            database.sharedContentDao().insertContent(SharedContentEntity(content = fileUri.toString(), type = "file"))
+                        }
                     }
                 }
                 else -> {
                     val unknownUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
                     Log.d("SharedIntent", "Received unknown type: ${intent.type}, URI: $unknownUri")
                     if (unknownUri != null) {
-                        database.insertSharedContent(unknownUri.toString(), "unknown")
+                        CoroutineScope(Dispatchers.IO).launch {
+                            database.sharedContentDao().insertContent(SharedContentEntity(content = unknownUri.toString(), type = "unknown"))
+                        }
                     }
                 }
             }

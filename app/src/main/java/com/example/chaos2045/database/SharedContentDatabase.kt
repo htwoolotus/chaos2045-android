@@ -1,103 +1,77 @@
 package com.example.chaos2045.database
 
-import android.content.ContentValues
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import androidx.room.*
+import androidx.room.Entity
+import androidx.room.RoomDatabase
 
-class SharedContentDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
-
-    companion object {
-        private const val DATABASE_NAME = "shared_content.db"
-        private const val DATABASE_VERSION = 1
-        const val TABLE_NAME = "shared_content"
-        const val COLUMN_ID = "id"
-        const val COLUMN_CONTENT = "content"
-        const val COLUMN_TYPE = "type"
-        const val COLUMN_TIMESTAMP = "timestamp"
-    }
-
-    override fun onCreate(db: SQLiteDatabase) {
-        val createTable = """
-            CREATE TABLE $TABLE_NAME (
-                $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                $COLUMN_CONTENT TEXT NOT NULL,
-                $COLUMN_TYPE TEXT NOT NULL,
-                $COLUMN_TIMESTAMP DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """.trimIndent()
-        db.execSQL(createTable)
-    }
-
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
-        onCreate(db)
-    }
-
-    fun insertSharedContent(content: String, type: String): Long {
-        val db = writableDatabase
-        val values = ContentValues().apply {
-            put(COLUMN_CONTENT, content)
-            put(COLUMN_TYPE, type)
-        }
-        return db.insert(TABLE_NAME, null, values)
-    }
-
-    fun getAllSharedContent(): List<SharedContent> {
-        val db = readableDatabase
-        val cursor = db.query(
-            TABLE_NAME,
-            null,
-            null,
-            null,
-            null,
-            null,
-            "$COLUMN_TIMESTAMP DESC"
-        )
-
-        val contentList = mutableListOf<SharedContent>()
-        while (cursor.moveToNext()) {
-            val id = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID))
-            val content = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CONTENT))
-            val type = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TYPE))
-            val timestamp = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
-            contentList.add(SharedContent(id, content, type, timestamp))
-        }
-        cursor.close()
-        return contentList
-    }
-
-    fun deleteSharedContent(id: Long): Boolean {
-        val db = writableDatabase
-        return db.delete(TABLE_NAME, "$COLUMN_ID = ?", arrayOf(id.toString())) > 0
-    }
-
-    fun getSharedContentById(id: Long): SharedContent? {
-        val db = readableDatabase
-        val cursor = db.query(
-            TABLE_NAME,
-            null,
-            "$COLUMN_ID = ?",
-            arrayOf(id.toString()),
-            null,
-            null,
-            null
-        )
-
-        return if (cursor.moveToFirst()) {
-            val content = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CONTENT))
-            val type = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TYPE))
-            val timestamp = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
-            SharedContent(id, content, type, timestamp)
-        } else {
-            null
-        }.also { cursor.close() }
-    }
-}
-
-data class SharedContent(
-    val id: Long,
+@Entity(tableName = "shared_content")
+data class SharedContentEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val content: String,
     val type: String,
-    val timestamp: String
-) 
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "forwarding_config")
+data class ForwardingConfigEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val apiUrl: String,
+    val token: String,
+    val matchString: String
+)
+
+@Dao
+interface SharedContentDao {
+    @Query("SELECT * FROM shared_content ORDER BY timestamp DESC")
+    fun getAllContent(): List<SharedContentEntity>
+
+    @Insert
+    fun insertContent(content: SharedContentEntity): Long
+
+    @Query("DELETE FROM shared_content WHERE id = :id")
+    fun deleteContent(id: Long)
+
+    @Query("SELECT * FROM shared_content WHERE id = :contentId")
+    fun getSharedContentById(contentId: Long): SharedContentEntity?
+}
+
+@Dao
+interface ForwardingConfigDao {
+    @Query("SELECT * FROM forwarding_config")
+    fun getAllConfigs(): List<ForwardingConfigEntity>
+
+    @Insert
+    fun insertConfig(config: ForwardingConfigEntity): Long
+
+    @Delete
+    fun deleteConfig(config: ForwardingConfigEntity)
+
+    @Query("SELECT * FROM forwarding_config WHERE id = :configId")
+    fun getConfigById(configId: Long): ForwardingConfigEntity?
+}
+
+@Database(entities = [SharedContentEntity::class, ForwardingConfigEntity::class], version = 2)
+abstract class SharedContentDatabase : RoomDatabase() {
+    abstract fun sharedContentDao(): SharedContentDao
+    abstract fun forwardingConfigDao(): ForwardingConfigDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: SharedContentDatabase? = null
+
+        fun getDatabase(context: Context): SharedContentDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    SharedContentDatabase::class.java,
+                    "shared_content_database"
+                )
+                .fallbackToDestructiveMigration()
+                .build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+}

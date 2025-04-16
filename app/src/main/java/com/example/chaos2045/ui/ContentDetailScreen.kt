@@ -8,7 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.chaos2045.database.SharedContent
+import com.example.chaos2045.database.SharedContentEntity
 import com.example.chaos2045.database.SharedContentDatabase
 import java.text.SimpleDateFormat
 import java.util.*
@@ -21,10 +21,10 @@ fun ContentDetailScreen(
     onNavigateBack: () -> Unit,
     onContentDeleted: () -> Unit
 ) {
-    var content by remember { mutableStateOf<SharedContent?>(null) }
+    var content by remember { mutableStateOf<SharedContentEntity?>(null) }
 
     LaunchedEffect(contentId) {
-        content = database.getSharedContentById(contentId)
+        //content = database.getSharedContentById(contentId)
     }
 
     Scaffold(
@@ -43,7 +43,7 @@ fun ContentDetailScreen(
                 Button(
                     onClick = {
                         content?.let {
-                            database.deleteSharedContent(it.id)
+                            database.sharedContentDao().deleteContent(it.id)
                             onContentDeleted()
                         }
                     },
@@ -95,13 +95,8 @@ fun ContentDetailScreen(
     }
 }
 
-private fun formatTimestamp(timestamp: String): String {
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
-        val date = inputFormat.parse(timestamp)
-        outputFormat.format(date)
-    } catch (e: Exception) {
-        timestamp
-    }
+private fun formatTimestamp(timestamp: Long): String {
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+    val date = Date(timestamp)
+    return dateFormat.format(date)
 } 

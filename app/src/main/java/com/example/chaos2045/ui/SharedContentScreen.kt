@@ -1,10 +1,10 @@
 package com.example.chaos2045.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -14,11 +14,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.example.chaos2045.database.SharedContent
+import com.example.chaos2045.database.SharedContentEntity
 import com.example.chaos2045.database.SharedContentDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
+
+//import com.example.chaos2045.database.SharedContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,10 +30,13 @@ fun SharedContentScreen(
     database: SharedContentDatabase,
     onNavigateToDetail: (Long) -> Unit
 ) {
-    var sharedContent by remember { mutableStateOf<List<SharedContent>>(emptyList()) }
+    var sharedContent by remember { mutableStateOf<List<SharedContentEntity>>(emptyList()) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        sharedContent = database.getAllSharedContent()
+        scope.launch(Dispatchers.IO) {
+            sharedContent = database.sharedContentDao().getAllContent()
+        }
     }
 
     Scaffold(
@@ -64,8 +71,10 @@ fun SharedContentScreen(
                         SwipeableContent(
                             content = content,
                             onDismiss = {
-                                database.deleteSharedContent(content.id)
-                                sharedContent = database.getAllSharedContent()
+                                //scope.launch(Dispatchers.IO) {
+                                    //database.sharedContentDao().deleteContent(content.id)
+                                //    sharedContent = database.sharedContentDao().getAllContent()
+                                //}
                             },
                             onClick = { onNavigateToDetail(content.id) }
                         )
@@ -78,7 +87,7 @@ fun SharedContentScreen(
 
 @Composable
 private fun SwipeableContent(
-    content: SharedContent,
+    content: SharedContentEntity,
     onDismiss: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -93,7 +102,11 @@ private fun SwipeableContent(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(8.dp),
+                    .padding(8.dp)
+                    .clickable {
+                        isDismissed = true
+                        onDismiss()
+                    },
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Icon(
@@ -101,6 +114,7 @@ private fun SwipeableContent(
                     contentDescription = "Delete",
                     tint = MaterialTheme.colorScheme.error
                 )
+
             }
 
             // Content card
@@ -112,8 +126,8 @@ private fun SwipeableContent(
                         detectHorizontalDragGestures { change, dragAmount ->
                             offsetX = (offsetX + dragAmount).coerceIn(-200f, 0f)
                             if (offsetX < -150f) {
-                                isDismissed = true
-                                onDismiss()
+                                //isDismissed = true
+                                //onDismiss()
                             }
                         }
                     },
@@ -144,13 +158,8 @@ private fun SwipeableContent(
     }
 }
 
-private fun formatTimestamp(timestamp: String): String {
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
-        val date = inputFormat.parse(timestamp)
-        outputFormat.format(date)
-    } catch (e: Exception) {
-        timestamp
-    }
+private fun formatTimestamp(timestamp: Long): String {
+    val date = Date(timestamp)
+    val format = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
+    return format.format(date)
 } 
