@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/windows/flutter/ephemeral
+**/GoogleService-Info.plist
+**/google-services.json
+**/chaos2045-f199c-firebase-adminsdk-fbsvc-19a9887d1e.json

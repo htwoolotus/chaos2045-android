@@ -45,5 +45,14 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb[YOUR_FACEBOOK_APP_ID]</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
