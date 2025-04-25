@@ -5,6 +5,8 @@ import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shareit/consts.dart';
+import 'package:shareit/main.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -38,7 +40,7 @@ class AuthService {
       debugPrint('idToken: $idToken');
 
       final response = await http.post(
-        Uri.parse('http://10.0.86.19:8000/api/auth/google'),
+        Uri.parse('${Consts.remoteUrl}/api/auth/google'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'idToken': idToken}),
       );
@@ -96,7 +98,7 @@ class AuthService {
 
           // 2. 调用后端登出API
           final response = await http.get(
-            Uri.parse('http://10.0.86.19:8000/protected'),
+            Uri.parse('${Consts.remoteUrl}/protected'),
             headers: {
               'Authorization': 'Bearer $accessToken',
             },
@@ -116,5 +118,10 @@ class AuthService {
       } finally {
         // 导航到登录页面或其他清理操作
       }
+  }
+
+  // 获取访问令牌
+  Future<String?> getAccessToken() async {
+    return await _secureStorage.read(key: 'access_token');
   }
 }

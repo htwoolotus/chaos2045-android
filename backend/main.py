@@ -67,7 +67,9 @@ def cleanup_expired_sessions():
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         token = credentials.credentials
+        print(f"Received token: {token[:20]}...")  # Print first 20 chars of token
         decoded_token = auth.verify_id_token(token)
+        print(f"Token verified successfully for user: {decoded_token.get('uid')}")
         
         # 更新会话活动时间
         uid = decoded_token['uid']
@@ -76,6 +78,7 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(secur
         
         return decoded_token
     except Exception as e:
+        print(f"Token verification failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="无效的认证凭证",
